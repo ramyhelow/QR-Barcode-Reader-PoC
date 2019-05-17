@@ -34,59 +34,33 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class MainActivity extends AppCompatActivity {
-    static DBHelper dbHelper;
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss");
-    RecyclerAdapter codeAdapter;
-    RecyclerView recyclerView;
+    private static DBHelper dbHelper;
+    private SimpleDateFormat sdf;
+    private RecyclerAdapter codeAdapter;
+    private RecyclerView recyclerView;
     private CodeScanner mCodeScanner;
     private Activity activity;
     private SlideUp slideUp;
     private View dim;
     private View sliderView;
     private FloatingActionButton fab;
+    private CodeScannerView scannerView;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    private void initObjects(){
+
+        sdf = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss");
         activity = this;
-
         dbHelper = new DBHelper(this);
 
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        this.getWindow().setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
-        Dexter.withActivity(this)
-                .withPermission(Manifest.permission.CAMERA)
-                .withListener(new PermissionListener() {
-                    @Override
-                    public void onPermissionGranted(PermissionGrantedResponse response) {
-                        loadApp();
-                    }
-
-                    @Override
-                    public void onPermissionDenied(PermissionDeniedResponse response) {
-                        finish();
-                    }
-
-                    @Override
-                    public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
-                        token.continuePermissionRequest();
-                    }
-                }).check();
-
-
-    }
-
-    public void loadApp() {
-        setContentView(R.layout.activity_main);
-
+        recyclerView = findViewById(R.id.code_recycler_view);
+        codeAdapter = new RecyclerAdapter(dbHelper.getAllCodes(), this);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+        recyclerView.setAdapter(codeAdapter);
 
         sliderView = findViewById(R.id.slideView);
-
         dim = findViewById(R.id.dim);
         fab = findViewById(R.id.fab);
+        scannerView = findViewById(R.id.codeScannerView);
 
         slideUp = new SlideUpBuilder(sliderView)
                 .withListeners(new SlideUp.Listener.Events() {
@@ -111,14 +85,9 @@ public class MainActivity extends AppCompatActivity {
                 .withStartState(SlideUp.State.HIDDEN)
                 .withSlideFromOtherView(findViewById(R.id.codeScannerView))
                 .build();
-
-
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        CodeScannerView scannerView = findViewById(R.id.codeScannerView);
+    private void setupScanner(){
         mCodeScanner = new CodeScanner(this, scannerView);
         mCodeScanner.setDecodeCallback(new DecodeCallback() {
             @Override
@@ -144,26 +113,59 @@ public class MainActivity extends AppCompatActivity {
                 mCodeScanner.startPreview();
             }
         });
-
-        recyclerView = findViewById(R.id.code_recycler_view);
-//        ArrayList<Code> data = new ArrayList<>();
-
-//        for(int i=0; i<100;i++){
-//            data.add(new Code(String.valueOf(i),"Code "+i));
-//        }
-
-        codeAdapter = new RecyclerAdapter(dbHelper.getAllCodes(), this);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-
-        recyclerView.setAdapter(codeAdapter);
-
         mCodeScanner.startPreview();
     }
 
     @Override
-    protected void onPause() {
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-        mCodeScanner.releaseResources();
+        //fullscreen
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        this.getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+        setContentView(R.layout.activity_main);
+
+        initObjects();
+
+
+
+        //request permission
+        Dexter.withActivity(this)
+                .withPermission(Manifest.permission.CAMERA)
+                .withListener(new PermissionListener() {
+                    @Override
+                    public void onPermissionGranted(PermissionGrantedResponse response) {
+                        setupScanner();
+                    }
+
+                    @Override
+                    public void onPermissionDenied(PermissionDeniedResponse response) {
+                        finish();
+                    }
+
+                    @Override
+                    public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
+                        token.continuePermissionRequest();
+                    }
+                }).check();
+
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(mCodeScanner!=null)
+            mCodeScanner.startPreview();
+    }
+
+    @Override
+    protected void onPause() {
+        if(mCodeScanner!=null)
+            mCodeScanner.releaseResources();
         super.onPause();
     }
 
