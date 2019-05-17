@@ -85,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
                 .withStartState(SlideUp.State.HIDDEN)
                 .withSlideFromOtherView(findViewById(R.id.codeScannerView))
                 .build();
+
     }
 
     private void setupScanner(){
